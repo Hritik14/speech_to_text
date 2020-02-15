@@ -54,6 +54,7 @@ class SpeechToText {
       const MethodChannel('plugin.csdcorp.com/speech_to_text');
   static final SpeechToText _instance =
       SpeechToText.withMethodChannel(speechChannel);
+  bool _debug = false;
   bool _initWorked = false;
   bool _recognized = false;
   bool _listening = false;
@@ -110,7 +111,7 @@ class SpeechToText {
   /// True if an error has been received, see [lastError] for details
   bool get hasError => null != lastError;
 
-    /// Returns true if the user has already granted permission to access the microphone.
+  /// Returns true if the user has already granted permission to access the microphone.
   ///
   /// This method can be called before [initialize] to check if permission
   /// has already been granted. If this returns false then the [initialize]
@@ -122,7 +123,7 @@ class SpeechToText {
     return hasPermission;
   }
 
-/// Initialize speech recognition services, returns true if
+  /// Initialize speech recognition services, returns true if
   /// successful, false if failed.
   ///
   /// This method must be called before any other speech functions.
@@ -193,13 +194,15 @@ class SpeechToText {
   /// sound level of the input changes. Use this to update the UI in response to
   /// more or less input.
   Future listen(
-      {SpeechResultListener onResult,
+      {bool debug,
+      SpeechResultListener onResult,
       Duration listenFor,
       String localeId,
       SpeechSoundLevelChange onSoundLevelChange}) async {
     if (!_initWorked) {
       throw SpeechToTextNotInitializedException();
     }
+    _debug = debug;
     _recognized = false;
     _resultListener = onResult;
     _soundLevelChange = onSoundLevelChange;
@@ -259,7 +262,8 @@ class SpeechToText {
   }
 
   Future _handleCallbacks(MethodCall call) async {
-    print("SpeechToText call: ${call.method} ${call.arguments}");
+    if (_debug && call.method != "soundLevelChange")
+      print("SpeechToText call: ${call.method} ${call.arguments}");
     switch (call.method) {
       case textRecognitionMethod:
         if (call.arguments is String) {
@@ -285,7 +289,7 @@ class SpeechToText {
     }
   }
 
-  void _onTextRecognition(String resultJson) {
+  void _onTextRecognition(String resultJson) async {
     _recognized = true;
     Map<String, dynamic> resultMap = jsonDecode(resultJson);
     SpeechRecognitionResult speechResult =
